@@ -1,5 +1,7 @@
 import logging
+import os
 
+from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application
 from telegram.ext import CommandHandler
@@ -7,7 +9,6 @@ from telegram.ext import ContextTypes
 from telegram.ext import MessageHandler
 
 logger = logging.getLogger(__name__)
-API_TOKEN = "7325411920:AAHvwpIZ4IjbYr4lHfTw_zAesHCVTWTj2-8"
 CHATS = {}
 FORWARDS = {}
 
@@ -66,8 +67,10 @@ async def try_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main() -> None:
     """Run the bot."""
+    load_dotenv()
+    api_token = os.getenv("TG_BOT_API_TOKEN")
     # Create the Application and pass it your bot's token
-    application = Application.builder().token(API_TOKEN).build()
+    application = Application.builder().token(api_token).build()
     # Register chat
     application.add_handler(CommandHandler("start", callback=register_chat))
     # Register forwarding rules
