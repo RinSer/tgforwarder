@@ -1,12 +1,10 @@
 import logging
 
 from telegram import Update
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    ContextTypes,
-    MessageHandler,
-)
+from telegram.ext import Application
+from telegram.ext import CommandHandler
+from telegram.ext import ContextTypes
+from telegram.ext import MessageHandler
 
 logger = logging.getLogger(__name__)
 API_TOKEN = "7325411920:AAHvwpIZ4IjbYr4lHfTw_zAesHCVTWTj2-8"
@@ -37,7 +35,7 @@ async def set_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"""Redirect should command should be:
                 `/redirect #tag @Forward1,@Forward2,@Etc`
                 Have received: {update.message.text}
-                """
+                """,
             )
 
 
@@ -58,10 +56,12 @@ async def try_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                 CHATS[receiver],
                                 from_chat_id=update.message.chat_id,
                                 message_id=update.message.message_id,
-                                disable_notification=False
+                                disable_notification=False,
                             )
                         except Exception:
-                            logger.exception(f"Could not forward to {receiver}")
+                            logger.exception(
+                                f"Could not forward to {receiver}"
+                            )
 
 
 def main() -> None:
@@ -78,5 +78,5 @@ def main() -> None:
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
