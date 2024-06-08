@@ -150,10 +150,15 @@ RUN set -eux; \
 	\
 	pip --version
 
-# RUN addgroup -S tgbot && adduser -S tgbot -G tgbot
-# USER tgbot
+RUN pip install cmake
+COPY ./requirements.txt requirements.txt
+RUN pip install -r requirements.txt
+RUN rm requirements.txt
+
+RUN addgroup -S tgbot && adduser -S tgbot -G tgbot
+USER tgbot
 
 WORKDIR /home/tgbot
-# COPY main.py main.py
+COPY ./src src
 
-CMD ["/bin/ash"]
+CMD ["python", "src/main.py"]
