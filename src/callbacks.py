@@ -87,7 +87,7 @@ async def try_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 if receivers:
                     for receiver in receivers:
                         chat_id = await get_chat_id(receiver)
-                        if chat_id:
+                        if chat_id and chat_id != update.message.chat_id:
                             await context.bot.forward_message(
                                 chat_id,
                                 from_chat_id=update.message.chat_id,
