@@ -1,0 +1,7 @@
+services:
+  tgbot:
+    tty: true
+    image: rinser/alpine-python:3.12.4
+    command: /bin/ash
+    volumes:
+      - ./:/home/tgbot

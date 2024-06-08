@@ -1,4 +1,0 @@
-precommit:
-  image: rinser/pre-commit:3.12-slim-bullseye
-  script:
-    - pre-commit run --all-files

@@ -1,25 +1,18 @@
-import logging
 import os
-import sys
 
 from dotenv import load_dotenv
+from logger import logger
 from telegram import Update
-from telegram.ext import Application
-from telegram.ext import CommandHandler
 from telegram.ext import ContextTypes
-from telegram.ext import filters
-from telegram.ext import MessageHandler
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-logger.addHandler(logging.StreamHandler(sys.stdout))
+from db import get_chat_id
+from db import get_receivers
+from db import put
+
 
 load_dotenv()
 API_TOKEN = os.getenv("TG_BOT_API_TOKEN")
 ROOTERS = os.getenv("ROOTERS").split(",")
-
-CHATS = {}
-FORWARDS = {}
 
 
 async def register_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -33,7 +26,7 @@ async def register_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if len(message_parts) < 2
             else message_parts[1]
         )
-        CHATS[chat_alias] = update.message.chat_id
+        await put(chat_alias, update.message.chat_id)
         await context.bot.send_message(
             update.message.chat_id, f"Have saved {chat_alias}"
         )
@@ -55,7 +48,11 @@ async def set_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if len(parts) == 3:
                 tag = parts[1]
                 receivers = parts[2]
-                FORWARDS[tag] = [r.strip() for r in receivers.split(",")]
+                await put(tag, receivers)
+                await context.bot.send_message(
+                    update.message.chat_id,
+                    f"Have registered forwarding to {receivers} by tag {tag}",
+                )
             else:
                 await context.bot.send_message(
                     update.message.chat_id,
@@ -77,17 +74,22 @@ async def try_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
     Try to forward the message if necessary
     """
     try:
-        if update.message.text:
-            message_text = update.message.text.strip()
+        if update.message.text or update.message.caption:
+            message_text = (
+                update.message.text.strip()
+                if update.message.text
+                else update.message.caption
+            )
             if message_text.startswith("#"):
                 tag = message_text.split("\n")[0]
                 tag = tag.strip()
-                if tag in FORWARDS:
-                    receivers = FORWARDS[tag]
+                receivers = await get_receivers(tag)
+                if receivers:
                     for receiver in receivers:
-                        if receiver in CHATS:
+                        chat_id = await get_chat_id(receiver)
+                        if chat_id:
                             await context.bot.forward_message(
-                                CHATS[receiver],
+                                chat_id,
                                 from_chat_id=update.message.chat_id,
                                 message_id=update.message.message_id,
                                 disable_notification=False,
@@ -102,28 +104,3 @@ async def try_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(
             update.message.chat_id, f"Error forwarding {update.message.text}"
         )
-
-
-def main() -> None:
-    """Run the bot."""
-    try:
-        # Create the Application and pass it your bot's token
-        application = Application.builder().token(API_TOKEN).build()
-        # Register chat
-        application.add_handler(CommandHandler("reg", callback=register_chat))
-        # Register forwarding rules
-        application.add_handler(CommandHandler("fwd", callback=set_forward))
-        # Try to forward any message that is not a command
-        application.add_handler(
-            MessageHandler(filters.Regex(r"#\w+.*"), callback=try_forward)
-        )
-        # Print alive
-        logger.info("Running IrRedirector TG Bot | To stop press Ctrl+C")
-        # Run the bot until the user presses Ctrl-C
-        application.run_polling(allowed_updates=Update.ALL_TYPES)
-    except Exception:
-        logger.exception("Tragic fail")
-
-
-if __name__ == "__main__":
-    main()
