@@ -28,14 +28,12 @@ async def register_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await put(chat_alias, update.message.chat_id)
         await context.bot.send_message(
-            update.message.chat_id, f"Have saved {chat_alias}"
+            update.message.chat_id, f"Have saved chat with {chat_alias}"
         )
     except Exception:
-        logger.exception(f"Could register chat alias {update.message.text}")
-        await context.bot.send_message(
-            update.message.chat_id,
-            f"Could not register chat alias {update.message.text}",
-        )
+        msg = f"Could not register chat alias {update.message.text}"
+        logger.exception(msg)
+        await context.bot.send_message(update.message.chat_id, msg)
 
 
 async def set_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -56,17 +54,15 @@ async def set_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 await context.bot.send_message(
                     update.message.chat_id,
-                    f"""Redirect should command should be:
-`/redirect #tag @Person0,Chat1,etc...`
+                    f"""Forward command should be:
+`/fwd #tag @Person0,Chat1,etc...`
 Have received: {update.message.text}
                     """,
                 )
     except Exception:
-        logger.exception(f"Could set redirect {update.message.text}")
-        await context.bot.send_message(
-            update.message.chat_id,
-            f"Could not set redirect {update.message.text}",
-        )
+        msg = f"Could not set forward {update.message.text}"
+        logger.exception(msg)
+        await context.bot.send_message(update.message.chat_id, msg)
 
 
 async def try_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -94,13 +90,13 @@ async def try_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                 message_id=update.message.message_id,
                                 disable_notification=False,
                             )
-                        else:
+                        elif not chat_id:
+                            msg = update.message.text
                             await context.bot.send_message(
                                 update.message.chat_id,
-                                f"{update.message.text}: unknown {receiver}",
+                                f"{msg}: unknown chat {receiver}",
                             )
     except Exception:
-        logger.exception(f"Could not forward to {update.message.id}")
-        await context.bot.send_message(
-            update.message.chat_id, f"Error forwarding {update.message.text}"
-        )
+        msg = f"Error forwarding {update.message.text} to {update.message.id}"
+        logger.exception(msg)
+        await context.bot.send_message(update.message.chat_id, msg)
