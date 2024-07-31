@@ -3,9 +3,7 @@ from rocksdb import ReadOptions
 from rocksdb import RocksDB
 from rocksdb import WriteOptions
 
-DB = RocksDB(
-    db_path="./db/bot_memory", options=Options(create_if_missing=True)
-)
+DB = RocksDB(db_path="./db/bot_memory", options=Options(create_if_missing=True))
 
 
 async def get(key):

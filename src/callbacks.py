@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from logger import logger
 from telegram import Update
+from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
 from db import get_chat_id
@@ -13,6 +14,27 @@ from db import put
 load_dotenv()
 API_TOKEN = os.getenv("TG_BOT_API_TOKEN")
 ROOTERS = os.getenv("ROOTERS").split(",")
+MANUAL_TEXT = r"""
+To forward messages, you need to create a chat with the recipient or destination chat/group\.
+Add the bot as a user to the chat or group and execute the /reg command\.
+For the bot to send messages to a user, the user must find the bot and send the /reg command in a private message\.
+
+To set up forwarding, execute the /fwd command in the chat or group from which messages should be forwarded,
+using the format: /fwd \#hashtag *\[list of usernames and/or chat/group names separated by commas\]*\.
+After this, any message starting with \#hashtag as the first line will be forwarded to all users, groups, or chats specified in the /fwd command\.
+"""
+
+
+async def manual(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Send user manual
+    """
+    try:
+        await context.bot.send_message(update.message.chat_id, MANUAL_TEXT, parse_mode=ParseMode.MARKDOWN_V2)
+    except Exception:
+        msg = "Could not send manual"
+        logger.exception(msg)
+        await context.bot.send_message(update.message.chat_id, msg)
 
 
 async def register_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -21,15 +43,9 @@ async def register_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     try:
         message_parts = update.message.text.split(" ")
-        chat_alias = (
-            update.message.from_user.name
-            if len(message_parts) < 2
-            else message_parts[1]
-        )
+        chat_alias = update.message.from_user.name if len(message_parts) < 2 else message_parts[1]
         await put(chat_alias, update.message.chat_id)
-        await context.bot.send_message(
-            update.message.chat_id, f"Have saved chat with {chat_alias}"
-        )
+        await context.bot.send_message(update.message.chat_id, f"Have saved chat with {chat_alias}")
     except Exception:
         msg = f"Could not register chat alias {update.message.text}"
         logger.exception(msg)
@@ -71,11 +87,7 @@ async def try_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     try:
         if update.message.text or update.message.caption:
-            message_text = (
-                update.message.text.strip()
-                if update.message.text
-                else update.message.caption
-            )
+            message_text = update.message.text.strip() if update.message.text else update.message.caption
             if message_text.startswith("#"):
                 tag = message_text.split("\n")[0]
                 tag = tag.strip()
