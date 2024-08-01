@@ -1,3 +1,5 @@
+import functools
+import inspect
 import os
 
 from dotenv import load_dotenv
@@ -6,14 +8,16 @@ from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
+from db import add_db_user
 from db import get_chat_id
 from db import get_receivers
+from db import get_users
 from db import put
 
 
 load_dotenv()
 API_TOKEN = os.getenv("TG_BOT_API_TOKEN")
-ROOTERS = os.getenv("ROOTERS").split(",")
+ROOTERS = [int(user_id) for user_id in os.getenv("ROOTERS").split(",")]
 MANUAL_TEXT = r"""
 To forward messages, you need to create a chat with the recipient or destination chat/group\.
 Add the bot as a user to the chat or group and execute the /reg command\.
@@ -23,6 +27,36 @@ To set up forwarding, execute the /fwd command in the chat or group from which m
 using the format: /fwd \#hashtag *\[list of usernames and/or chat/group names separated by commas\]*\.
 After this, any message starting with \#hashtag as the first line will be forwarded to all users, groups, or chats specified in the /fwd command\.
 """
+
+
+def auth(users):
+    def auth_func(func):
+        @functools.wraps(func)
+        async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            if inspect.iscoroutinefunction(users):
+                user_ids = await users()
+            else:
+                user_ids = users
+            if update.message.from_user.id in user_ids:
+                await func(update, context)
+            else:
+                await context.bot.send_message(update.message.chat_id, "Permissions denied")
+
+        return callback
+
+    return auth_func
+
+
+@auth(ROOTERS)
+async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        user_id = update.message.text.split(" ")[1]
+        await add_db_user(user_id)
+        await context.bot.send_message(update.message.chat_id, f"Have added user id {user_id}")
+    except Exception:
+        msg = f"Could not {update.message.text}"
+        logger.exception(msg)
+        await context.bot.send_message(update.message.chat_id, msg)
 
 
 async def manual(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -52,29 +86,29 @@ async def register_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(update.message.chat_id, msg)
 
 
+@auth(get_users)
 async def set_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Set forwarding rule
     """
     try:
-        if update.message.from_user.name in ROOTERS:
-            parts = update.message.text.split(" ")
-            if len(parts) == 3:
-                tag = parts[1]
-                receivers = parts[2]
-                await put(tag, receivers)
-                await context.bot.send_message(
-                    update.message.chat_id,
-                    f"Have registered forwarding to {receivers} by tag {tag}",
-                )
-            else:
-                await context.bot.send_message(
-                    update.message.chat_id,
-                    f"""Forward command should be:
+        parts = update.message.text.split(" ")
+        if len(parts) == 3:
+            tag = parts[1]
+            receivers = parts[2]
+            await put(tag, receivers)
+            await context.bot.send_message(
+                update.message.chat_id,
+                f"Have registered forwarding to {receivers} by tag {tag}",
+            )
+        else:
+            await context.bot.send_message(
+                update.message.chat_id,
+                f"""Forward command should be:
 `/fwd #tag @Person0,Chat1,etc...`
 Have received: {update.message.text}
-                    """,
-                )
+                """,
+            )
     except Exception:
         msg = f"Could not set forward {update.message.text}"
         logger.exception(msg)

@@ -1,4 +1,5 @@
 from buttons import post_init
+from callbacks import add_user
 from callbacks import API_TOKEN
 from callbacks import manual
 from callbacks import register_chat
@@ -23,6 +24,8 @@ def main() -> None:
         app.add_handler(CommandHandler("reg", callback=register_chat))
         # Register forwarding rules
         app.add_handler(CommandHandler("fwd", callback=set_forward))
+        # Add user id with tag creation permission
+        app.add_handler(CommandHandler("add", callback=add_user))
         # Try to forward any message that is not a command
         app.add_handler(MessageHandler(filters.Regex(r"#\w+.*"), callback=try_forward))
         app.add_handler(MessageHandler(filters.CaptionRegex(r"#\w+.*"), callback=try_forward))
