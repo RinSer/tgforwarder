@@ -27,20 +27,25 @@ To set up forwarding, execute the /fwd command in the chat or group from which m
 using the format: /fwd \#hashtag *\[list of usernames and/or chat/group names separated by commas\]*\.
 After this, any message starting with \#hashtag as the first line will be forwarded to all users, groups, or chats specified in the /fwd command\.
 """
+UNKNOWN_COMMAND = "Unknown command"
 
 
 def auth(users):
     def auth_func(func):
         @functools.wraps(func)
         async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            if inspect.iscoroutinefunction(users):
+            is_coroutine = inspect.iscoroutinefunction(users)
+            if is_coroutine:
                 user_ids = await users()
             else:
                 user_ids = users
             if update.message.from_user.id in user_ids:
                 await func(update, context)
             else:
-                await context.bot.send_message(update.message.chat_id, "Permissions denied")
+                if is_coroutine:
+                    await context.bot.send_message(update.message.chat_id, "Permissions denied")
+                else:
+                    await context.bot.send_message(update.message.chat_id, UNKNOWN_COMMAND)
 
         return callback
 
@@ -49,8 +54,15 @@ def auth(users):
 
 @auth(ROOTERS)
 async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Add user with tag creation permission
+    """
     try:
-        user_id = update.message.text.split(" ")[1]
+        message_parts = update.message.text.split(" ")
+        if len(message_parts) < 2:
+            await context.bot.send_message(update.message.chat_id, UNKNOWN_COMMAND)
+            return
+        user_id = message_parts[1]
         await add_db_user(user_id)
         await context.bot.send_message(update.message.chat_id, f"Have added user id {user_id}")
     except Exception:
@@ -146,3 +158,29 @@ async def try_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = f"Error forwarding {update.message.text} to {update.message.id}"
         logger.exception(msg)
         await context.bot.send_message(update.message.chat_id, msg)
+
+
+async def show_user_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Send user's data
+    """
+    try:
+        msg = f"""
+        {update.message.from_user.name}
+ID: {update.message.from_user.id}
+FirstName: {update.message.from_user.first_name}
+LastName: {update.message.from_user.last_name}
+Language: {update.message.from_user.language_code}
+        """
+        await context.bot.send_message(update.message.chat_id, msg)
+    except Exception:
+        msg = "Could not send user's data"
+        logger.exception(msg)
+        await context.bot.send_message(update.message.chat_id, msg)
+
+
+async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Unknown command stub
+    """
+    await context.bot.send_message(update.message.chat_id, UNKNOWN_COMMAND)

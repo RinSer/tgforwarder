@@ -4,7 +4,9 @@ from callbacks import API_TOKEN
 from callbacks import manual
 from callbacks import register_chat
 from callbacks import set_forward
+from callbacks import show_user_data
 from callbacks import try_forward
+from callbacks import unknown_command
 from logger import logger
 from telegram import Update
 from telegram.ext import Application
@@ -26,6 +28,10 @@ def main() -> None:
         app.add_handler(CommandHandler("fwd", callback=set_forward))
         # Add user id with tag creation permission
         app.add_handler(CommandHandler("add", callback=add_user))
+        # Get user's data
+        app.add_handler(CommandHandler("mydata", callback=show_user_data))
+        # Unknown command
+        app.add_handler(MessageHandler(filters.Regex(r"/.+"), callback=unknown_command))
         # Try to forward any message that is not a command
         app.add_handler(MessageHandler(filters.Regex(r"#\w+.*"), callback=try_forward))
         app.add_handler(MessageHandler(filters.CaptionRegex(r"#\w+.*"), callback=try_forward))

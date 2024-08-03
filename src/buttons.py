@@ -3,7 +3,11 @@ from telegram import BotCommand
 from telegram.ext import Application
 
 
-command_info = [BotCommand("start", "See the manual"), BotCommand("reg", "Register chat with the bot")]
+command_info = [
+    BotCommand("start", "See the manual"),
+    BotCommand("reg", "Register chat with the bot"),
+    BotCommand("mydata", "Get your user's data"),
+]
 
 
 async def post_init(application: Application) -> None:
